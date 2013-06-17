@@ -31,11 +31,12 @@ parseWithIO s = s >>= (return . parse)
 toCASLConverter :: InputFile -> String
 toCASLConverter i = 
 	(addCASLHeader (collectSymbols i)) $ 
-		(neg. connectByConj) $ (foldr (\a b -> converter a : b) [] i)
+		(toProvetag . neg . connectByConj) $ 
+		(foldr (\a b -> converter a : b) [] i)
 	where 
 		connectByConj = unlines . (intersperse ("/\\"))	
 		neg = ((++) ".not ") . wrapInPar
-
+		toProvetag a =  (++) a "%implied %(toprove)%"
 
 converter :: (Formula NomSymbol PropSymbol RelSymbol) -> String
 converter f = case f of 
