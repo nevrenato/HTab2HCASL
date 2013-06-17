@@ -32,7 +32,7 @@ toCASLConverter :: InputFile -> String
 toCASLConverter i = 
 	(addCASLHeader (collectSymbols i)) $ 
 		(toProvetag . neg . connectByConj) $ 
-		(foldr (\a b -> converter a : b) [] i)
+		(foldr (\a b -> (wrapInPar . converter) a : b) [] i)
 	where 
 		connectByConj = unlines . (intersperse ("/\\"))	
 		neg = ((++) ".not ") . wrapInPar
@@ -47,8 +47,8 @@ converter f = case f of
 	(Neg g) -> "not "++(convWrap g)
 	(g :&: g') -> wrap (convWrap g) "/\\" (convWrap g')
 	(g :|: g') -> wrap (convWrap g) "\\/" (convWrap g')
-	(g :-->: g') -> wrap (convWrap g) " => " (convWrap g')
-	(g :<-->: g') -> wrap (convWrap g) "<==>" (convWrap g')
+	(g :-->: g') -> wrap (convWrap g) "=> " (convWrap g')
+	(g :<-->: g') -> wrap (convWrap g) "<=>" (convWrap g')
 	(Diam r g) -> wrapInDia (ppm r)++(convWrap g)	
 	(Box r g) -> wrapInBox (ppm r)++(convWrap g)
 	(At n g) -> wrap "@" (ppn n) (convWrap g)
