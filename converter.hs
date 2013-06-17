@@ -22,12 +22,20 @@ convertToCASL a = work a >>= (return . toCASLConverter)
 parseWithIO :: IO String -> IO InputFile
 parseWithIO s = s >>= (return . parse)
 
+-- The resulting formulas are negated, since
+-- we care not about sat or unsat, but valid
+-- or not. If we negate a formula and
+-- get unsat, then the result is valid. On the other 
+-- hand if is
+-- sat, then is not valid (disproved).
 toCASLConverter :: InputFile -> String
 toCASLConverter i = 
 	(addCASLHeader (collectSymbols i)) $ 
-		connectByConj $ (foldr (\a b -> converter a : b) [] i)
+		(neg. connectByConj) $ (foldr (\a b -> converter a : b) [] i)
 	where 
 		connectByConj = unlines . (intersperse ("/\\"))	
+		neg = ((++) ".not ") . wrapInPar
+
 
 converter :: (Formula NomSymbol PropSymbol RelSymbol) -> String
 converter f = case f of 
@@ -60,11 +68,18 @@ cASLHeader (a,b,c) =
 	++"logic Hybrid"
 	++"\n"
 	++"spec X =\n"
-	++"preds "++(f a)++":()\n"
-	++"nominals "++(f b)++"\n"
-	++"modalities "++(f c)++"\n"
+	++preds
+	++noms
+	++mods
 	where
 		f = concat . (intersperse ",") . elems
+		preds = if (a == empty) then ""
+				else "preds "++(f a)++":()\n"
+		noms = if (b == empty) then ""
+				else "nominals "++(f b)++"\n"
+		mods = if (c == empty) then ""
+				else "modalities "++(f c)++"\n"
+
 
 addCASLHeader :: SymSet -> String -> String
 addCASLHeader x = (cASLHeader x ++) 
