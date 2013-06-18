@@ -52,9 +52,9 @@ converter f = case f of
 	(Diam r g) -> wrapInDia (ppm r)++(convWrap g)	
 	(Box r g) -> wrapInBox (ppm r)++(convWrap g)
 	(At n g) -> wrap "@" (ppn n) (convWrap g)
-	--f (A g) s = f g s
-	--f (E g) s = f g s
-	--f (Down n g) s = f g s
+	(A g) -> "! y "++("@ y "++(convWrap g)) 
+	(E g) -> "? y "++("@ y "++(convWrap g)) 
+	(Down n g) -> "? "++(ppn n)++" "++(wrapInPar $ (ppn n)++" /\\ "++(converter g))
 	where
 		--pretty printer
 		ppp (PropSymbol p) = p
