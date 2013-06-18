@@ -54,7 +54,7 @@ converter f = case f of
 	(At n g) -> wrap "@" (ppn n) (convWrap g)
 	(A g) -> "! y "++("@ y "++(convWrap g)) 
 	(E g) -> "? y "++("@ y "++(convWrap g)) 
-	(Down n g) -> "? "++(ppn n)++" "++(wrapInPar $ (ppn n)++" /\\ "++(converter g))
+	(Down n g) -> "? "++(ppn n)++" "++(wrapInPar $ (ppn n)++" /\\ "++(convWrap g))
 	where
 		--pretty printer
 		ppp (PropSymbol p) = p
@@ -113,8 +113,9 @@ collectSymbols = foldr f triEmpty
 		f (At n g) s = f g (addNom n s)
 		f (A g) s = f g s
 		f (E g) s = f g s
-		f (Down n g) s = f g s
-
+		f (Down n g) s = let (a,b,c) = f g s in (a, delete (ppn n) b, c)
+		-- one must use delete, so that nominal variables 
+		-- are not declared in the signature
 wrap :: String -> String -> String -> String
 wrap w s w'  = w++" "++s++" "++w'
 
