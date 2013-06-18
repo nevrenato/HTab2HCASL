@@ -54,7 +54,8 @@ converter f = case f of
 	(At n g) -> wrap "@" (ppn n) (convWrap g)
 	(A g) -> "! y "++("@ y "++(convWrap g)) 
 	(E g) -> "? y "++("@ y "++(convWrap g)) 
-	(Down n g) -> "? "++(ppn n)++" "++(wrapInPar $ (ppn n)++" /\\ "++(convWrap g))
+	(Down n g) -> "? "++(ppn n)++" "++
+			(wrapInPar $ "Here "++(ppn n)++" /\\ "++(convWrap g))
 	where
 		--pretty printer
 		ppp (PropSymbol p) = p
