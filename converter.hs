@@ -1,4 +1,6 @@
 -- Renato Neves, email:nevrenato@gmail.com
+-- Here lies two converters. One from HTab to HCasl, and another from HTab to HyLoRes
+
 module X
 where 
 
@@ -12,6 +14,7 @@ import Data.List (intersperse)
 type SymSet = (Set String, Set String, Set String) 
 triEmpty = (empty, empty, empty)
 
+-- 1s part of this system, namely the converter to HCasl
 main :: FilePath -> IO ()
 main f = (convertToCASL f) >>= (writeFile (f++"c"))
 
@@ -62,6 +65,7 @@ converter f = case f of
 		ppn (NomSymbol n) = n
 		ppm (RelSymbol m) = m	
 		convWrap = wrapInPar . converter
+
 
 cASLHeader :: SymSet -> String
 cASLHeader (a,b,c) =
@@ -117,6 +121,77 @@ collectSymbols = foldr f triEmpty
 		f (Down n g) s = let (a,b,c) = f g s in (a, delete (ppn n) b, c)
 		-- one must use delete, so that nominal variables 
 		-- are not declared in the signature
+-------------------------
+-- 2nd part of this system. Namely the converter to HyLoRes
+
+main_Res :: FilePath -> IO ()
+main_Res f = (convertToRes f) >>= (writeFile (f++"r"))
+
+
+convertToRes :: FilePath -> IO String
+convertToRes a = work a >>= (return . toResConverter)
+	where work = parseWithIO . readFile
+
+toResConverter :: InputFile -> String
+toResConverter i =
+	(addResHeader . connect) $ 
+		foldr (\a b -> converterRes a : b) [] i
+	where
+		addResHeader s = "begin\n"++s++"\nend"
+		connect = unlines . (intersperse ";")
+
+converterRes :: (Formula NomSymbol PropSymbol RelSymbol) -> String
+converterRes f = case f of 
+	Top -> "true"
+	Bot -> "false"
+	(Prop p) -> ppp p
+	(Nom n) -> ppn n
+	(Neg g) -> "!"++(convWrap g)
+	(g :&: g') -> wrap (convWrap g) "&" (convWrap g')
+	(g :|: g') -> wrap (convWrap g) "|" (convWrap g')
+	(g :-->: g') -> wrap (convWrap g) "-->" (convWrap g')
+	(g :<-->: g') -> wrap (convWrap g) "<-->" (convWrap g')
+	(Diam r g) -> wrapInDia (ppm r)++(convWrap g)	
+	(Box r g) -> wrapInBox (ppm r)++(convWrap g)
+	(At n g) -> (ppn n)++": "++(convWrap g)
+	(A g) -> "A"++convWrap g 
+	(E g) -> "E"++convWrap g 
+	(Down n g) -> (wrapInPar . ("down " ++) . wrapInPar . ((("x" ++) $ tail $ ppn n) ++)) (convWrap (rep (ppn n) g))
+	where
+		--pretty printer
+		ppp (PropSymbol p) = p
+		ppn (NomSymbol n) = n
+		ppm (RelSymbol m) = m	
+		convWrap = wrapInPar . converterRes
+		
+
+-- The following function, replaces nominals variables in the format "nX" 
+-- to "xX", thereby conforming to HyLoRes.
+rep s f' = case f' of
+	Top -> Top
+	Bot -> Bot
+	(Prop p) -> Prop p
+	Nom n ->  (Nom. NomSymbol) $ fNom s $ ppn n 
+	Neg g -> Neg g
+	(g :&: g') -> (rep s g) :&: (rep s g')
+	(g :|: g') -> (rep s g) :|: (rep s g')
+	(g :-->: g') -> (rep s g) :-->: (rep s g')
+	(g :<-->: g') -> (rep s g) :<-->: (rep s g')
+	(Diam r g) -> Diam r (rep s g)
+	(Box r g) -> Box r (rep s g)
+	(At n g) -> At (NomSymbol $ fNom s $ ppn n) (rep s g)
+	(A g) -> A (rep s g)
+	(E g) -> E (rep s g)
+	(Down n g) -> Down n (rep s g)
+	where 
+	--pretty printer
+	ppn (NomSymbol n) = n
+	fNom s n = if (n == s) 
+				then ("x" ++) $ tail n 	
+				else n 
+
+------------
+-- Auxiliar functions
 wrap :: String -> String -> String -> String
 wrap w s w'  = w++" "++s++" "++w'
 
